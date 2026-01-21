@@ -171,19 +171,31 @@ class HierarchicalReasoningModel_ACTV1_Inner(nn.Module):
             z_L=torch.empty(batch_size, self.config.seq_len + self.puzzle_emb_len, self.config.hidden_size, dtype=self.forward_dtype),
         )
         
-    def reset_carry(self, reset_flag: torch.Tensor, carry: HierarchicalReasoningModel_ACTV1InnerCarry):
-        return HierarchicalReasoningModel_ACTV1InnerCarry(
-            z_H=torch.where(reset_flag.view(-1, 1, 1), self.H_init, carry.z_H),
-            z_L=torch.where(reset_flag.view(-1, 1, 1), self.L_init, carry.z_L),
-        )
+    def reset_carry(self, reset_flag: torch.Tensor, carry: HierarchicalReasoningModel_ACTV1InnerCarry, use_default=True):
+        if use_default:
+            return HierarchicalReasoningModel_ACTV1InnerCarry(
+                z_H=torch.where(reset_flag.view(-1, 1, 1), self.H_init, carry.z_H),
+                z_L=torch.where(reset_flag.view(-1, 1, 1), self.L_init, carry.z_L),
+            )
+        else:
+            H_tmp = trunc_normal_init_(torch.empty(self.config.hidden_size, dtype=self.forward_dtype), std=2).to("cuda")+self.H_init
+            L_tmp = trunc_normal_init_(torch.empty(self.config.hidden_size, dtype=self.forward_dtype), std=2).to("cuda")+self.L_init
+            return HierarchicalReasoningModel_ACTV1InnerCarry(
+                z_H=torch.where(reset_flag.view(-1, 1, 1), H_tmp, carry.z_H),
+                z_L=torch.where(reset_flag.view(-1, 1, 1), L_tmp, carry.z_L)
+            )
 
-    def forward(self, carry: HierarchicalReasoningModel_ACTV1InnerCarry, batch: Dict[str, torch.Tensor]) -> Tuple[HierarchicalReasoningModel_ACTV1InnerCarry, torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+
+    def forward(self, carry: HierarchicalReasoningModel_ACTV1InnerCarry, batch: Dict[str, torch.Tensor], require_trace=False):
+    #  -> Tuple[HierarchicalReasoningModel_ACTV1InnerCarry, torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         seq_info = dict(
             cos_sin=self.rotary_emb() if hasattr(self, "rotary_emb") else None,
         )
 
         # Input encoding
         input_embeddings = self._input_embeddings(batch["inputs"], batch["puzzle_identifiers"])
+
+        z_H_trace = []
 
         # Forward iterations
         with torch.no_grad():
@@ -196,12 +208,17 @@ class HierarchicalReasoningModel_ACTV1_Inner(nn.Module):
 
                 if not (_H_step == self.config.H_cycles - 1):
                     z_H = self.H_level(z_H, z_L, **seq_info)
+                    if require_trace:
+                        z_H_trace.append(z_H.detach().cpu().clone())
 
         assert not z_H.requires_grad and not z_L.requires_grad
 
         # 1-step grad
         z_L = self.L_level(z_L, z_H + input_embeddings, **seq_info)
         z_H = self.H_level(z_H, z_L, **seq_info)
+
+        if require_trace:
+            z_H_trace.append(z_H.detach().cpu().clone())
 
         # LM Outputs
         new_carry = HierarchicalReasoningModel_ACTV1InnerCarry(z_H=z_H.detach(), z_L=z_L.detach())  # New carry no grad
@@ -210,7 +227,10 @@ class HierarchicalReasoningModel_ACTV1_Inner(nn.Module):
         # Q head
         q_logits = self.q_head(z_H[:, 0]).to(torch.float32)
         
-        return new_carry, output, (q_logits[..., 0], q_logits[..., 1])
+        if require_trace:
+            return z_H_trace, new_carry, output, (q_logits[..., 0], q_logits[..., 1])
+        else:
+            return new_carry, output, (q_logits[..., 0], q_logits[..., 1])
 
 
 class HierarchicalReasoningModel_ACTV1(nn.Module):
@@ -237,7 +257,8 @@ class HierarchicalReasoningModel_ACTV1(nn.Module):
             current_data={k: torch.empty_like(v) for k, v in batch.items()}
         )
         
-    def forward(self, carry: HierarchicalReasoningModel_ACTV1Carry, batch: Dict[str, torch.Tensor]) -> Tuple[HierarchicalReasoningModel_ACTV1Carry, Dict[str, torch.Tensor]]:
+    def forward(self, carry: HierarchicalReasoningModel_ACTV1Carry, batch: Dict[str, torch.Tensor], require_trace=False):
+        # -> Tuple[HierarchicalReasoningModel_ACTV1Carry, Dict[str, torch.Tensor], torch.Tensor]:
         # Update data, carry (removing halted sequences)
         new_inner_carry = self.inner.reset_carry(carry.halted, carry.inner_carry)
         
@@ -246,7 +267,10 @@ class HierarchicalReasoningModel_ACTV1(nn.Module):
         new_current_data = {k: torch.where(carry.halted.view((-1, ) + (1, ) * (batch[k].ndim - 1)), batch[k], v) for k, v in carry.current_data.items()}
 
         # Forward inner model
-        new_inner_carry, logits, (q_halt_logits, q_continue_logits) = self.inner(new_inner_carry, new_current_data)
+        if require_trace:
+            z_H_trace, new_inner_carry, logits, (q_halt_logits, q_continue_logits) = self.inner(new_inner_carry, new_current_data, require_trace=require_trace)
+        else:
+            new_inner_carry, logits, (q_halt_logits, q_continue_logits) = self.inner(new_inner_carry, new_current_data)
 
         outputs = {
             "logits": logits,
@@ -258,6 +282,7 @@ class HierarchicalReasoningModel_ACTV1(nn.Module):
             # Step
             new_steps = new_steps + 1
             is_last_step = new_steps >= self.config.halt_max_steps
+            # is_last_step = new_steps >= 32
             
             halted = is_last_step
 
@@ -279,5 +304,7 @@ class HierarchicalReasoningModel_ACTV1(nn.Module):
                 next_q_halt_logits, next_q_continue_logits = self.inner(new_inner_carry, new_current_data)[-1]
                 
                 outputs["target_q_continue"] = torch.sigmoid(torch.where(is_last_step, next_q_halt_logits, torch.maximum(next_q_halt_logits, next_q_continue_logits)))
-
-        return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs
+        if require_trace:
+            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps, z_H_trace
+        else:
+            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps

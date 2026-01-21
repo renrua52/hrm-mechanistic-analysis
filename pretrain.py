@@ -281,11 +281,35 @@ def evaluate(config: PretrainConfig, train_state: TrainState, eval_loader: torch
                 carry = train_state.model.initial_carry(batch)  # type: ignore
 
             # Forward
+            segment_idx = 0
+            segment_losses = []
+            segment_accuracies = []
+            segment_exact_accuracies = []
+
             while True:
                 carry, _, metrics, preds, all_finish = train_state.model(carry=carry, batch=batch, return_keys=config.eval_save_outputs)
                 
+                
+                segment_loss = metrics["lm_loss"].detach()
+                segment_accuracy = metrics["accuracy"].detach()
+                segment_exact_accuracy = metrics["exact_accuracy"].detach()
+                segment_idx += 1
+
+                segment_losses.append(segment_loss)
+                segment_accuracies.append(segment_accuracy)
+                segment_exact_accuracies.append(segment_exact_accuracy)
+                
                 if all_finish:
                     break
+            
+            assert segment_idx == 16
+            for idx in range(segment_idx):
+                metrics.update({
+                    f"segment_{idx+1}_loss": segment_losses[idx],
+                    f"segment_{idx+1}_accuracy": segment_accuracies[idx],
+                    f"segment_{idx+1}_exact_accuracy": segment_exact_accuracies[idx],
+                })
+
 
             for collection in (batch, preds):
                 for k, v in collection.items():
@@ -310,6 +334,7 @@ def evaluate(config: PretrainConfig, train_state: TrainState, eval_loader: torch
 
             os.makedirs(config.checkpoint_path, exist_ok=True)
             torch.save(all_preds, os.path.join(config.checkpoint_path, f"step_{train_state.step}_all_preds.{rank}"))
+            print('all_preds saved.')
 
         # Logging
         # Reduce to rank 0

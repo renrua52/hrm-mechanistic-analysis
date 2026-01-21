@@ -49,13 +49,20 @@ class ACTLossHead(nn.Module):
     def forward(
         self,
         return_keys: Sequence[str],
+        require_trace=False,
         # Model args
         **model_kwargs,
     ) -> Tuple[Any, torch.Tensor, Dict[str, torch.Tensor], Optional[Dict[str, torch.Tensor]], torch.Tensor]:
         # Model logits
         # B x SeqLen x D
-        new_carry, outputs = self.model(**model_kwargs)
+        if require_trace:
+            new_carry, outputs, steps, z_H_trace = self.model(**model_kwargs, require_trace=require_trace)
+        else:
+            new_carry, outputs, steps = self.model(**model_kwargs)
         labels = new_carry.current_data["labels"]
+        alpha = 1.0
+        ds_mask = (alpha ** (16-steps.detach())).unsqueeze(dim=1)
+        # print(ds_mask.shape)
 
         # Correctness
         with torch.no_grad():
@@ -66,8 +73,10 @@ class ACTLossHead(nn.Module):
             is_correct = mask & (torch.argmax(outputs["logits"], dim=-1) == labels)
             seq_is_correct = is_correct.sum(-1) == loss_counts
             
-            # Metrics (halted)
-            valid_metrics = new_carry.halted & (loss_counts > 0)
+            # # Metrics (halted)
+            # valid_metrics = new_carry.halted & (loss_counts > 0)
+            valid_metrics = (loss_counts > 0)
+
             metrics = {
                 "count": valid_metrics.sum(),
                 
@@ -80,7 +89,9 @@ class ACTLossHead(nn.Module):
 
         # Losses
         # FIXME: Assuming the batch is always full
-        lm_loss = (self.loss_fn(outputs["logits"], labels, ignore_index=IGNORE_LABEL_ID) / loss_divisor).sum()
+        loss = self.loss_fn(outputs["logits"], labels, ignore_index=IGNORE_LABEL_ID)
+        # print(loss.shape)
+        lm_loss = (ds_mask * loss / loss_divisor).sum()
         q_halt_loss = F.binary_cross_entropy_with_logits(outputs["q_halt_logits"], seq_is_correct.to(outputs["q_halt_logits"].dtype), reduction="sum")
 
         metrics.update({
@@ -98,4 +109,7 @@ class ACTLossHead(nn.Module):
         # Filter outputs for return
         detached_outputs = {k: outputs[k].detach() for k in return_keys if k in outputs}
 
-        return new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all()
+        if require_trace:
+            return z_H_trace, new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all()
+        else:
+            return new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all()

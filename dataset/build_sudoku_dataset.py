@@ -24,29 +24,7 @@ class DataProcessConfig(BaseModel):
     num_aug: int = 0
     hint: bool = False
 
-
-def add_random_hints(puzzle: np.ndarray, solution: np.ndarray) -> np.ndarray:
-    easier_puzzle = puzzle.copy()
-    
-    # Find positions where puzzle has blanks (value 0)
-    blank_positions = np.where(puzzle == 0)
-    blank_indices = list(zip(blank_positions[0], blank_positions[1]))
-    
-    if len(blank_indices) == 0:
-        return easier_puzzle  # No blanks to fill
-    
-    num_hints = np.random.randint(1, len(blank_indices))
-    
-    # Randomly select positions to fill
-    selected_positions = np.random.choice(len(blank_indices), size=num_hints, replace=False)
-    
-    # Fill selected positions with solution values
-    for idx in selected_positions:
-        row, col = blank_indices[idx]
-        easier_puzzle[row, col] = solution[row, col]
-    
-    return easier_puzzle
-
+from dataset.sudoku_transforms import add_random_hints
 
 def shuffle_sudoku(board: np.ndarray, solution: np.ndarray):
     # Create a random digit mapping: a permutation of 1..9, with zero (blank) unchanged

@@ -22,6 +22,30 @@ class DataProcessConfig(BaseModel):
     subsample_size: Optional[int] = None
     min_difficulty: Optional[int] = None
     num_aug: int = 0
+    hint: bool = False
+
+
+def add_random_hints(puzzle: np.ndarray, solution: np.ndarray) -> np.ndarray:
+    easier_puzzle = puzzle.copy()
+    
+    # Find positions where puzzle has blanks (value 0)
+    blank_positions = np.where(puzzle == 0)
+    blank_indices = list(zip(blank_positions[0], blank_positions[1]))
+    
+    if len(blank_indices) == 0:
+        return easier_puzzle  # No blanks to fill
+    
+    num_hints = np.random.randint(1, len(blank_indices))
+    
+    # Randomly select positions to fill
+    selected_positions = np.random.choice(len(blank_indices), size=num_hints, replace=False)
+    
+    # Fill selected positions with solution values
+    for idx in selected_positions:
+        row, col = blank_indices[idx]
+        easier_puzzle[row, col] = solution[row, col]
+    
+    return easier_puzzle
 
 
 def shuffle_sudoku(board: np.ndarray, solution: np.ndarray):
@@ -99,7 +123,7 @@ def convert_subset(set_name: str, config: DataProcessConfig):
             else:
                 inp, out = shuffle_sudoku(orig_inp, orig_out)
 
-            # Push puzzle (only single example)
+            # Push original puzzle X
             results["inputs"].append(inp)
             results["labels"].append(out)
             example_id += 1
@@ -107,6 +131,17 @@ def convert_subset(set_name: str, config: DataProcessConfig):
             
             results["puzzle_indices"].append(example_id)
             results["puzzle_identifiers"].append(0)
+            
+            # Push easier puzzle X' (with additional hints)
+            if set_name == 'train' and config.hint:
+                easier_inp = add_random_hints(inp, out)
+                results["inputs"].append(easier_inp)
+                results["labels"].append(out)  # Same solution
+                example_id += 1
+                puzzle_id += 1
+                
+                results["puzzle_indices"].append(example_id)
+                results["puzzle_identifiers"].append(0)
             
         # Push group
         results["group_indices"].append(puzzle_id)
@@ -167,3 +202,8 @@ def preprocess_data(config: DataProcessConfig):
 
 if __name__ == "__main__":
     cli()
+
+'''
+WANDB_MODE=offline
+OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000-hint epochs=40000 eval_interval=1000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+'''

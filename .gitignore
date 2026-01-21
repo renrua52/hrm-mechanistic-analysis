@@ -2,6 +2,7 @@
 /wandb/
 # checkpoints
 /checkpoints/
+/checkpoint_example/
 # cache
 /cache/
 # data

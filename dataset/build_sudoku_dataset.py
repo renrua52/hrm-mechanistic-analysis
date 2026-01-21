@@ -24,7 +24,7 @@ class DataProcessConfig(BaseModel):
     num_aug: int = 0
     hint: bool = False
 
-from dataset.sudoku_transforms import add_random_hints
+from sudoku_transforms import add_random_hints
 
 def shuffle_sudoku(board: np.ndarray, solution: np.ndarray):
     # Create a random digit mapping: a permutation of 1..9, with zero (blank) unchanged
@@ -180,8 +180,3 @@ def preprocess_data(config: DataProcessConfig):
 
 if __name__ == "__main__":
     cli()
-
-'''
-WANDB_MODE=offline
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000-hint epochs=40000 eval_interval=1000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
-'''

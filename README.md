@@ -29,10 +29,11 @@ OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-
 
 ## Evaluation
 
-We use W&B to store results, in accodance with original HRM implementation.
-
-For the results of Augmented HRM, run `batch_inference.py` with both augmentation tricks enabled, and make sure you are using a model trained on the augmented dataset.
+For the results of Augmented HRM, run `batch_inference.py` with both augmentation tricks enabled, and make sure you are using a model trained on the augmented dataset (e.g. the one from the example checkpoints). For example, run the following script:
+~~~
+./scripts/batch_inference.sh
+~~~
 
 ## Reasoning Trace Analysis & Visualization
 
-We added a `require_trace' argument to the HRM model forwarding, with the intermediate z_H states returned as a list.
+We added a `require_trace' argument to the HRM model forwarding, with the intermediate z_H states returned as a list. We recommend that one checkout the demo to understand how results in the paper were attained.

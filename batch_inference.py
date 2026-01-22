@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from pretrain import PretrainConfig, init_train_state, create_dataloader
 from eval_utils import load_checkpoint_and_config, create_batch, forward_batch
 
-
 def main():
     parser = argparse.ArgumentParser(description="Batched Evaluation")
     parser.add_argument("--checkpoints", type=str, required=True)

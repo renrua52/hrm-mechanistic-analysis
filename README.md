@@ -108,7 +108,8 @@ The `eval_interval` option does not influence training process. Evaluation typic
 
 This repository was forked-and-hacked from [sapientai/HRM](https://github.com/sapientinc/HRM) (Apache-2.0).
 I kept most upstream code intact and mostly layered on evaluation, augmentation and visualisation.  
-New files I worked on include:
+
+Core files I worked on include:
 - `eval_utils.py`
 - `batch_inference.py`  
 - `visualization/`

@@ -11,6 +11,18 @@ This repository provides the **official PyTorch implementation** of our 2026 pap
 
 ## Quick Start 🚀
 
+### Prerequisites
+
+Make sure you have PyTorch, CUDA and FlashAttention installed. Then install the python dependencies:
+~~~
+pip install -r requirements.txt
+~~~
+
+Log in [Weights & Biases](https://wandb.ai) via
+~~~
+wandb login
+~~~
+
 Check out the [demo](./demo.ipynb) to understand how most results in the paper were attained.
 
 ## Dataset Preparation
@@ -38,8 +50,6 @@ OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-
 ## Model Evaluation
 
 Most of the utilities for testing are implemented in `eval_utils.py`.
-
-
 
 For evaluating trained checkpoints, we provide a quick-and-dirty implementation of batched inference in `batch_inference.py`, which runs on a single GPU. It supports the evaluation on *Sudoku-Extreme* of ensembled checkpoints, with or without the permuting token augmentation. For example, to do a full evaluation of the example checkpoint, run:
 ~~~

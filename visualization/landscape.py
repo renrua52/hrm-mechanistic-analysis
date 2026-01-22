@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, ListedColormap
 from scipy.interpolate import griddata

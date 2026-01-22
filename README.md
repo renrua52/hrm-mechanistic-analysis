@@ -13,19 +13,22 @@ This repository provides the **official PyTorch implementation** of our 2026 pap
 
 ### Prerequisites
 
-Make sure you have PyTorch, CUDA and FlashAttention installed. Then install the python dependencies:
+We use Git LFS to store the example checkpoints; so if you want to use them, install via
+~~~
+git lfs install
+~~~
+and **clone this repository with the variable set as below**, so that you don't download all large files all at once.
+~~~
+export GIT_LFS_SKIP_SMUDGE=1
+git clone git@github.com:renrua52/hrm-mechanistic-analysis.git
+~~~
+
+Make sure you have PyTorch, CUDA and FlashAttention installed (see the official guide of [HRM](https://github.com/sapientinc/HRM)). Then install the python dependencies:
 ~~~
 pip install -r requirements.txt
 ~~~
 
-Log in [Weights & Biases](https://wandb.ai) via
-~~~
-wandb login
-~~~
-
-Check out the [demo](./demo.ipynb) to understand how most results in the paper were attained.
-
-## Dataset Preparation
+### Dataset Preparation
 
 Run the following commands to build vanilla and augmented sudoku dataset, respectively.
 
@@ -34,18 +37,21 @@ python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1
 python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000-hint  --subsample-size 1000 --num-aug 1000 --hint
 ~~~
 
-The latter is an augmented version of the former, with easier sudoku puzzles mixed in. In the paper, we showed that this augmentation helps to restore inference stability.
+The latter is an augmented version of the former, with easier sudoku puzzles mixed in. In our paper, we showed that this augmentation helps to restore inference stability.
 
-## Training
+### Example Checkpoints
 
-Run the following commands to train HRM on either version of the datasets. Training randomness has observable impact on the outcome, so we recommend inspecting the `exact_accuracy` in W&B and choosing the best checkpoint for evaluation.
-
-The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely.
-
+For those not interested in training models themselves, we provide two sets of trained checkpoints for evaluation. Run the following commands to download them (**you only need the first one to run the demo**):
 ~~~
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000 epochs=40000 eval_interval=2000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
-OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000-hint epochs=40000 eval_interval=2000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/**"  # 1 single vanilla HRM ckpt
+git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000-hint ACT-torch/**"  # 10 ckpts of HRM trained on augmented dataset. This is for testing the model boostrapping technique.
 ~~~
+
+### Quick Demo of Reasoning Trajectory & Visualization
+
+Check out our [demo notebook](./demo.ipynb) to understand how most results in the paper were attained!
+
+We added a `require_trace` argument to the HRM model forwarding process, with the intermediate z_H states returned as a list. The `visualization` module is used to visualize both reasoning trajectory and error landscape. 
 
 ## Model Evaluation
 
@@ -63,10 +69,32 @@ python batch_inference.py --checkpoints "checkpoint_example/Sudoku-extreme-1k-au
 ~~~
 which tests the designated ckpt on 1000 test samples, applying 9 token permutations to each.
 
-For the full result of **Augmented HRM**, train your own series of checkpoints on the *augmented* dataset with ckpt interval 1000. Replace the checkpoints in `scripts/example_evaluation.sh` with your own. Then run the script. The full evaluation process takes around 500 GPU hours, due to the cost of multiple forward processes (90x). Again, if you just want to understand how it works, use a smaller number of samples.
+For the full result of **Augmented HRM**, do one of the following:
+- Download the second set of example checkpoints.
+- Train your own series of checkpoints on the *augmented* dataset with ckpt interval 1000. Replace the checkpoints in `scripts/example_evaluation.sh` with your own.
+
+Then run the script
+~~~
+bash ./scripts/example_evaluation.sh
+~~~
+The full evaluation process takes around 500 GPU hours, due to the cost of multiple forward processes (90x). Again, if you just want to understand how it works, using a smaller number of samples gives you a similar result.
 
 Due to large variances in small-sample training, a ~2% discrepancy in single ckpt results and ~4% in multiple ckpt results are considered acceptable.
 
-## Reasoning Trace Analysis & Visualization
+## Training
 
-We added a `require_trace` argument to the HRM model forwarding process, with the intermediate z_H states returned as a list. The `visualization` module is used to visualize both reasoning trajectory and error landscape. 
+Log in [Weights & Biases](https://wandb.ai) via
+~~~
+wandb login
+~~~
+
+Run the following commands to train HRM on both version of the datasets.
+
+~~~
+OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000 epochs=40000 eval_interval=1000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000-hint epochs=40000 eval_interval=1000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
+~~~
+
+Training randomness has observable impact on the outcome, so we recommend inspecting the `exact_accuracy` in W&B and choosing the best checkpoint for evaluation.
+
+The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely.

@@ -104,6 +104,20 @@ Training randomness has observable impact on the outcome, so we recommend inspec
 
 The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely. If you wish to ensemble ckpts, however, we recommend checkpointing more frequently in the final stage of training.
 
+## Acknowldgement
+
+This repository was forked-and-hacked from [sapientai/HRM](https://github.com/sapientinc/HRM) (Apache-2.0).
+I kept most upstream code intact and mostly layered on evaluation, augmentation and visualisation.  
+New files I worked on include:
+- `eval_utils.py`
+- `batch_inference.py`  
+- `visualization/`
+- `demo.ipynb`
+
+Besides, I slightly modified the dataset building code for augmentation, and modeling code for reasoning trace extraction.
+
+Most original logic remains unchanged; see the upstream repo for the core implementation.  
+
 ## Cite
 
 ~~~

@@ -35,17 +35,27 @@ OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-
 OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-extreme-1k-aug-1000-hint epochs=40000 eval_interval=2000 lr=1e-4 puzzle_emb_lr=1e-4 weight_decay=1.0 puzzle_emb_weight_decay=1.0
 ~~~
 
-## Evaluation
+## Model Evaluation
 
 Most of the utilities for testing are implemented in `eval_utils.py`.
 
-For the results of Augmented HRM, run `batch_inference.py` with both augmentation tricks enabled, and make sure you are using a model trained on the augmented dataset (e.g. the one from the example checkpoints). For example, running the following script
-~~~
-./scripts/batch_inference.sh
-~~~
-reproduces the ~55% accuracy in the original HRM paper.
 
-Due to variance in training, a ~2% discrepancy in accuracy is acceptable.
+
+For evaluating trained checkpoints, we provide a quick-and-dirty implementation of batched inference in `batch_inference.py`, which runs on a single GPU. It supports the evaluation on *Sudoku-Extreme* of ensembled checkpoints, with or without the permuting token augmentation. For example, to do a full evaluation of the example checkpoint, run:
+~~~
+python batch_inference.py --checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint"
+~~~
+which typically takes 30 mins on an A10 GPU to reproduces the ~55% accuracy in the original HRM paper.
+
+Multiple forwarding requires way more time. To get a taste of the accuracies of Table 1 in the paper, we recommend running the single-GPU script on a small portion of test samples. You can do something like:
+~~~
+python batch_inference.py --checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint" --permutes 9 --num_batch 10 --batch_size 100
+~~~
+which tests the designated ckpt on 1000 test samples, applying 9 token permutations to each.
+
+For the full result of **Augmented HRM**, train your own series of checkpoints on the *augmented* dataset with ckpt interval 1000. Replace the checkpoints in `scripts/example_evaluation.sh` with your own. Then run the script. The full evaluation process takes around 500 GPU hours, due to the cost of multiple forward processes (90x). Again, if you just want to understand how it works, use a smaller number of samples.
+
+Due to large variances in small-sample training, a ~2% discrepancy in single ckpt results and ~4% in multiple ckpt results are considered acceptable.
 
 ## Reasoning Trace Analysis & Visualization
 

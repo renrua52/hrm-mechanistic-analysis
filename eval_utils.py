@@ -8,7 +8,10 @@ import numpy as np
 
 from dataset.sudoku_transforms import sudoku_cyclic_shift
 
-from pretrain import PretrainConfig
+from pretrain import PretrainConfig, TrainState
+
+import torch.distributed as dist
+from puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig, PuzzleDatasetMetadata
 
 def load_checkpoint_and_config(checkpoint_path: str):
     """Load checkpoint and config, adapted from eval_checkpoint.py"""
@@ -125,14 +128,13 @@ def forward_single_sample(model, batch: Dict[str, torch.Tensor]):
         "z_H_traces": z_H_traces,
     }
 
-def create_batch(train_loader, train_metadata, puzzle_id: int, idx: int, batch_size, permute):
-    all_inputs = np.load("data/sudoku-extreme-1k-aug-1000/test/all__inputs.npy")
-    all_labels = np.load("data/sudoku-extreme-1k-aug-1000/test/all__labels.npy")
-    inputs = all_inputs[idx*batch_size:(idx+1)*batch_size]
-    labels = all_labels[idx*batch_size:(idx+1)*batch_size]
+def create_batch(all_inputs, all_labels, puzzle_id: int, idx: int, batch_size, permute):
+    
+    inputs = torch.from_numpy(all_inputs[idx*batch_size:(idx+1)*batch_size]).cuda()
+    labels = torch.from_numpy(all_labels[idx*batch_size:(idx+1)*batch_size]).cuda()
 
-    inputs_tensor = sudoku_cyclic_shift(torch.from_numpy(inputs).long(), permute)
-    labels_tensor = sudoku_cyclic_shift(torch.from_numpy(labels).long(), permute)
+    inputs_tensor = sudoku_cyclic_shift(inputs.long(), permute)
+    labels_tensor = sudoku_cyclic_shift(labels.long(), permute)
     puzzle_ids_tensor = torch.from_numpy(np.asarray(puzzle_id)).long()
     
     batch = {

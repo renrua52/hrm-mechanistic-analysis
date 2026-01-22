@@ -33,8 +33,8 @@ pip install -r requirements.txt
 Run the following commands to build vanilla and augmented sudoku dataset, respectively.
 
 ~~~
-python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000  --subsample-size 1000 --num-aug 1000
-python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000-hint  --subsample-size 1000 --num-aug 1000 --hint
+python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000 --subsample-size 1000 --num-aug 1000
+python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1000-hint --subsample-size 1000 --num-aug 1000 --hint
 ~~~
 
 The latter is an augmented version of the former, with easier sudoku puzzles mixed in. In our paper, we showed that this augmentation helps to restore inference stability.
@@ -43,8 +43,10 @@ The latter is an augmented version of the former, with easier sudoku puzzles mix
 
 For those not interested in training models themselves, we provide two sets of trained checkpoints for evaluation. Run the following commands to download them (**you only need the first one to run the demo**):
 ~~~
-git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/**"  # 1 single vanilla HRM ckpt
-git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000-hint ACT-torch/**"  # 10 ckpts of HRM trained on augmented dataset. This is for testing the model boostrapping technique.
+# 1 single vanilla HRM ckpt
+git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/**"
+# 10 ckpts of HRM trained on augmented dataset. This is for the model boostrapping technique.
+git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000-hint ACT-torch/**"  
 ~~~
 
 ### Quick Demo of Reasoning Trajectory & Visualization
@@ -59,13 +61,16 @@ Most of the utilities for testing are implemented in `eval_utils.py`.
 
 For evaluating trained checkpoints, we provide a quick-and-dirty implementation of batched inference in `batch_inference.py`, which runs on a single GPU. It supports the evaluation on *Sudoku-Extreme* of ensembled checkpoints, with or without the permuting token augmentation. For example, to do a full evaluation of the example checkpoint, run:
 ~~~
-python batch_inference.py --checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint"
+python batch_inference.py \
+--checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint"
 ~~~
 which typically takes 30 mins on an A10 GPU to reproduces the ~55% accuracy in the original HRM paper.
 
 Multiple forwarding requires way more time. To get a taste of the accuracies of Table 1 in the paper, we recommend running the single-GPU script on a small portion of test samples. You can do something like:
 ~~~
-python batch_inference.py --checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint" --permutes 9 --num_batch 10 --batch_size 100
+python batch_inference.py \
+--checkpoints "checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/HierarchicalReasoningModel_ACTV1 pastel-lorikeet/example_checkpoint" \
+--permutes 9 --num_batch 10 --batch_size 100
 ~~~
 which tests the designated ckpt on 1000 test samples, applying 9 token permutations to each.
 
@@ -97,4 +102,18 @@ OMP_NUM_THREADS=8 torchrun --nproc-per-node 8 pretrain.py data_path=data/sudoku-
 
 Training randomness has observable impact on the outcome, so we recommend inspecting the `exact_accuracy` in W&B and choosing the best checkpoint for evaluation.
 
-The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely.
+The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely. If you wish to ensemble ckpts, however, we recommend checkpointing more frequently in the final stage of training.
+
+## Cite
+
+~~~
+@misc{ren2026reasoningmodelsreasoningguessing,
+      title={Are Your Reasoning Models Reasoning or Guessing? A Mechanistic Analysis of Hierarchical Reasoning Models}, 
+      author={Zirui Ren and Ziming Liu},
+      year={2026},
+      eprint={2601.10679},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2601.10679}, 
+}
+~~~

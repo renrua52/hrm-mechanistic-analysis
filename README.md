@@ -1,4 +1,4 @@
-# HRM: Are They Reasoning or Guessing?
+# Are Your Reasoning Models Reasoning or Guessing? A Mechanistic Analysis of HRM
 
 <img width="993" height="359" alt="image" src="https://github.com/user-attachments/assets/2425608d-f56f-4c7a-b426-f7e1227202dc" />
 
@@ -11,7 +11,7 @@ This repository provides the **official PyTorch implementation** of our 2026 pap
 
 ## Quick Start 🚀
 
-### Prerequisites
+### Prerequisites ⚙️
 
 We use Git LFS to store the example checkpoints; so if you want to use them, install via
 ~~~
@@ -28,7 +28,7 @@ Make sure you have PyTorch, CUDA and FlashAttention installed (see the official 
 pip install -r requirements.txt
 ~~~
 
-### Dataset Preparation
+### Dataset Preparation 📊
 
 Run the following commands to build vanilla and augmented sudoku dataset, respectively.
 
@@ -39,7 +39,7 @@ python dataset/build_sudoku_dataset.py --output-dir data/sudoku-extreme-1k-aug-1
 
 The latter is an augmented version of the former, with easier sudoku puzzles mixed in. In our paper, we showed that this augmentation helps to restore inference stability.
 
-### Example Checkpoints
+### Example Checkpoints 🚧
 
 For those not interested in training models themselves, we provide two sets of trained checkpoints for evaluation. Run the following commands to download them (**you only need the first one to run the demo**):
 ~~~
@@ -49,13 +49,13 @@ git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000 ACT-torch/
 git lfs pull --include="checkpoint_example/Sudoku-extreme-1k-aug-1000-hint ACT-torch/**"  
 ~~~
 
-### Quick Demo of Reasoning Trajectory & Visualization
+### Quick Demo of Reasoning Trajectory & Visualization 🎨
 
 Check out our [demo notebook](./demo.ipynb) to understand how most results in the paper were attained!
 
 We added a `require_trace` argument to the HRM model forwarding process, with the intermediate z_H states returned as a list. The `visualization` module is used to visualize both reasoning trajectory and error landscape. 
 
-## Model Evaluation
+## Model Evaluation 📈
 
 Most of the utilities for testing are implemented in `eval_utils.py`.
 
@@ -86,7 +86,7 @@ This is a snapshot evaluation for you to understand how augmentation works. The 
 
 Due to large variances in small-sample training, a ~2% discrepancy in single ckpt results and ~4% in multiple ckpt results are considered acceptable.
 
-## Training
+## Training ⚡️
 
 Log in [Weights & Biases](https://wandb.ai) via
 ~~~
@@ -104,7 +104,7 @@ Training randomness has observable impact on the outcome, so we recommend inspec
 
 The `eval_interval` option does not influence training process. Evaluation typically takes considerable time, so set it wisely. If you wish to ensemble ckpts, however, we recommend checkpointing more frequently in the final stage of training.
 
-## Acknowldgement
+## Acknowledgement 🧑‍🎓
 
 This repository was forked-and-hacked from [sapientai/HRM](https://github.com/sapientinc/HRM) (Apache-2.0).
 I kept most upstream code intact and mostly layered on evaluation, augmentation and visualisation.  
@@ -119,7 +119,7 @@ Besides, I slightly modified the dataset building code for augmentation, and mod
 
 Most original logic remains unchanged; see the upstream repo for the core implementation.  
 
-## Cite
+## Citation 📜
 
 ~~~
 @misc{ren2026reasoningmodelsreasoningguessing,

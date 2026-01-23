@@ -56,9 +56,9 @@ class ACTLossHead(nn.Module):
         # Model logits
         # B x SeqLen x D
         if require_trace:
-            new_carry, outputs, steps, z_H_trace = self.model(**model_kwargs, require_trace=require_trace)
+            new_carry, outputs, steps, act_halt, z_H_trace = self.model(**model_kwargs, require_trace=require_trace)
         else:
-            new_carry, outputs, steps = self.model(**model_kwargs)
+            new_carry, outputs, steps, act_halt = self.model(**model_kwargs)
         labels = new_carry.current_data["labels"]
         alpha = 1.0
         ds_mask = (alpha ** (16-steps.detach())).unsqueeze(dim=1)
@@ -110,6 +110,6 @@ class ACTLossHead(nn.Module):
         detached_outputs = {k: outputs[k].detach() for k in return_keys if k in outputs}
 
         if require_trace:
-            return z_H_trace, new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all()
+            return z_H_trace, new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all(), new_carry.halted & act_halt
         else:
-            return new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all()
+            return new_carry, lm_loss + 0.5 * (q_halt_loss + q_continue_loss), metrics, detached_outputs, new_carry.halted.all(), new_carry.halted & act_halt

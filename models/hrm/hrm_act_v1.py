@@ -304,7 +304,8 @@ class HierarchicalReasoningModel_ACTV1(nn.Module):
                 next_q_halt_logits, next_q_continue_logits = self.inner(new_inner_carry, new_current_data)[-1]
                 
                 outputs["target_q_continue"] = torch.sigmoid(torch.where(is_last_step, next_q_halt_logits, torch.maximum(next_q_halt_logits, next_q_continue_logits)))
+
         if require_trace:
-            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps, z_H_trace
+            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps, (q_halt_logits > q_continue_logits), z_H_trace
         else:
-            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps
+            return HierarchicalReasoningModel_ACTV1Carry(new_inner_carry, new_steps, halted, new_current_data), outputs, new_steps, (q_halt_logits > q_continue_logits)

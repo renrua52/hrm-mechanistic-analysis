@@ -82,7 +82,7 @@ Then run the script
 ~~~
 bash ./scripts/example_evaluation.sh
 ~~~
-The full evaluation process takes around 500 GPU hours, due to the cost of multiple forward processes (90x). Again, if you just want to understand how it works, using a smaller number of samples gives you a similar result.
+This is a snapshot evaluation for you to understand how augmentation works. The full evaluation (see the [script](/scripts/example_evaluation.sh)) process takes around 500 GPU hours, due to the cost of multiple forward processes. Parallelization should speed up the evaluation significantly - contributions are welcome!
 
 Due to large variances in small-sample training, a ~2% discrepancy in single ckpt results and ~4% in multiple ckpt results are considered acceptable.
 

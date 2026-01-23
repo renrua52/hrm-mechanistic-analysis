@@ -94,7 +94,7 @@ def forward_single_sample(model, batch: Dict[str, torch.Tensor]):
     with torch.inference_mode():
         while True:
             with torch.no_grad():
-                z_H_trace, carry, loss, metrics, preds, all_finish = model(
+                z_H_trace, carry, loss, metrics, preds, all_finish, act_halt = model(
                     carry=carry, 
                     batch=batch, 
                     require_trace=True, # This option allows one to access intermediate z_H states
@@ -162,7 +162,7 @@ def forward_batch(model, batch: Dict[str, torch.Tensor]):
     # Iterative forward passes until halting (adapted from pretrain.py evaluate function)
     with torch.inference_mode():
         while True:
-            carry, loss, metrics, preds, all_finish = model(
+            carry, loss, metrics, preds, all_finish, act_halt = model(
                 carry=carry, 
                 batch=batch, 
                 return_keys=["logits"]
@@ -184,5 +184,6 @@ def forward_batch(model, batch: Dict[str, torch.Tensor]):
         "all_logits": all_logits,
         "all_predictions": all_predictions,
         "all_carries": all_carries,
-        "total_steps": step
+        "total_steps": step,
+        "act_halt": act_halt
     }

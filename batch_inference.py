@@ -80,6 +80,7 @@ def main():
             for model in models:
                 all_batch_predictions = []
                 all_batch_labels = []
+                all_batch_halts = []
                 
                 for perm in range(permutes):
                     inputs_perm = sudoku_cyclic_shift(batch_inputs, perm)
@@ -95,16 +96,23 @@ def main():
                     
                     all_batch_predictions.append(results["all_predictions"][-1])
                     all_batch_labels.append(labels_perm)
+                    all_batch_halts.append(results["act_halt"])
                 
                 # Stack all predictions and check if any permutation is correct for each example
                 stacked_predictions = torch.stack(all_batch_predictions, dim=0)  # [permutes, batch_size, 81]
                 stacked_labels = torch.stack(all_batch_labels, dim=0)
+                stacked_halts = torch.stack(all_batch_halts, dim=0) # [permutes, batch_size]
                 
                 equal_elements = (stacked_labels == stacked_predictions)  # [permutes, batch_size, 81]
                 all_equal = torch.all(equal_elements, dim=2)  # [permutes, batch_size]
-                any_perm_correct = torch.any(all_equal, dim=0)  # [batch_size]
-                
+                all_equal = all_equal & stacked_halts  # Only consider the passes halted by ACT
+                correct_cnt = torch.sum(all_equal, dim=0)  # [batch_size]
+                halt_cnt = torch.sum(stacked_halts, dim=0)
+                any_perm_correct = (correct_cnt*2 > halt_cnt)  # 50% majority among halted passes
+                 
                 all_correct[start_idx:end_idx] |= any_perm_correct
+
+                # In practice, the ACT mechanism reaches about 100% accuracy in final stages of training.
             
             del batch_inputs, batch_labels
             if 'batch' in locals():

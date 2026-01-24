@@ -220,7 +220,7 @@ def train_batch(config: PretrainConfig, train_state: TrainState, batch: Any, glo
             train_state.carry = train_state.model.initial_carry(batch)  # type: ignore
 
     # Forward
-    train_state.carry, loss, metrics, _, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=[])
+    train_state.carry, loss, metrics, _, _, _ = train_state.model(carry=train_state.carry, batch=batch, return_keys=[])
 
     ((1 / global_batch_size) * loss).backward()
 

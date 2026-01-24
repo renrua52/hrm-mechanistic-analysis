@@ -114,21 +114,21 @@ def main():
                 
                 equal_elements = (stacked_labels == stacked_predictions)  # [permutes, batch_size, 81]
                 all_equal = torch.all(equal_elements, dim=2)  # [permutes, batch_size]
-                all_equal = all_equal & stacked_halts  # Only consider the passes halted by ACT
+                
+                if dataset_type == "sudoku":
+                    all_equal = all_equal & stacked_halts  # Only consider the passes halted by ACT
+
                 correct_cnt = torch.sum(all_equal, dim=0)  # [batch_size]
                 halt_cnt = torch.sum(stacked_halts, dim=0)
 
                 if dataset_type == "sudoku":
                     perm_correct = (correct_cnt*2 > halt_cnt)  # 50% majority among halted passes
                 else:
-                    perm_correct = (correct_cnt > 0)
-
-                # print(correct_cnt)
-                # print(halt_cnt)
+                    perm_correct = (correct_cnt > 0) # For maze, only 2 passes in total.
                  
                 all_correct[start_idx:end_idx] |= perm_correct
 
-                # In practice, the ACT mechanism reaches about 100% accuracy in final stages of training.
+                # In practice, for sudoku, the ACT mechanism reaches about 100% accuracy in final stages of training.
             
             del batch_inputs, batch_labels
             if 'batch' in locals():

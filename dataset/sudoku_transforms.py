@@ -1,6 +1,8 @@
 import numpy as np
 
 def sudoku_cyclic_shift(x, perm: int):
+    if perm == 0:
+        return x
     mask = (x >= 2) & (x <= 10)
 
     idx = x[mask] - 2

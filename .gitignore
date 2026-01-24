@@ -9,6 +9,8 @@
 /data/
 
 /nohup.out
+/figures/
+/tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

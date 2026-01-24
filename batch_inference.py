@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pretrain import PretrainConfig, init_train_state, create_dataloader
 from eval_utils import load_checkpoint_and_config, forward_batch
 from dataset.sudoku_transforms import sudoku_cyclic_shift
+from dataset.maze_transforms import maze_swap
 
 def main():
     parser = argparse.ArgumentParser(description="Batched Evaluation")
@@ -17,11 +18,15 @@ def main():
     parser.add_argument("--permutes", type=int, default=1)
     parser.add_argument("--num_batch", type=int, default=4646)
     parser.add_argument("--batch_size", type=int, default=91)
+    parser.add_argument("--dataset", type=str, default="sudoku")
     args = parser.parse_args()
     ckpt_list = [p.strip() for p in args.checkpoints.split(",")]
     permutes = args.permutes
     num_batch = args.num_batch
     batch_size = args.batch_size
+    dataset_type = args.dataset
+
+    assert not (dataset_type == "maze" and permutes > 2)
 
     torch.cuda.set_device(0)
 
@@ -59,8 +64,8 @@ def main():
         models.append(train_state.model)
     
     print("Loading data...")
-    all_inputs = torch.from_numpy(np.load("data/sudoku-extreme-1k-aug-1000/test/all__inputs.npy")).long().cuda()
-    all_labels = torch.from_numpy(np.load("data/sudoku-extreme-1k-aug-1000/test/all__labels.npy")).long().cuda()
+    all_inputs = torch.from_numpy(np.load(f"{config.data_path}/test/all__inputs.npy")).long().cuda()
+    all_labels = torch.from_numpy(np.load(f"{config.data_path}/test/all__labels.npy")).long().cuda()
     print("Data loaded successfully!")
     
     correct = 0
@@ -83,8 +88,9 @@ def main():
                 all_batch_halts = []
                 
                 for perm in range(permutes):
-                    inputs_perm = sudoku_cyclic_shift(batch_inputs, perm)
-                    labels_perm = sudoku_cyclic_shift(batch_labels, perm)
+                    transform = sudoku_cyclic_shift if dataset_type == "sudoku" else maze_swap
+                    inputs_perm = transform(batch_inputs, perm)
+                    labels_perm = transform(batch_labels, perm)
                     
                     batch = {
                         "inputs": inputs_perm,
@@ -108,7 +114,7 @@ def main():
                 all_equal = all_equal & stacked_halts  # Only consider the passes halted by ACT
                 correct_cnt = torch.sum(all_equal, dim=0)  # [batch_size]
                 halt_cnt = torch.sum(stacked_halts, dim=0)
-                any_perm_correct = (correct_cnt*2 > halt_cnt)  # 50% majority among halted passes
+                any_perm_correct = (correct_cnt*2 >= halt_cnt)  # 50% majority among halted passes
                  
                 all_correct[start_idx:end_idx] |= any_perm_correct
 

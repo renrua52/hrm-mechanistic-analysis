@@ -37,7 +37,7 @@ def differentiable_conflict_loss(board): # Heuristic error metric in the paper
     
     return loss
 
-def plot_landscape_heatmap(data_dict, z_proj_list, dests=None):
+def plot_landscape_heatmap(data_dict, z_proj_list, dests=None, density=0.05):
     if not data_dict:
         raise ValueError("data_dict is empty.")
 
@@ -67,7 +67,7 @@ def plot_landscape_heatmap(data_dict, z_proj_list, dests=None):
     im1 = ax.imshow(main_grid, cmap='viridis', origin='lower',
                     extent=extent)
     cb1 = plt.colorbar(im1, ax=ax, fraction=0.046, pad=0.04)
-    cb1.set_label('Error Metric Value')
+    cb1.set_label('Error Value')
 
     ax.imshow(mask_grid, cmap=ListedColormap(['none', "#B0B0B0"]),
               origin='lower', extent=extent, vmin=0, vmax=1)
@@ -86,7 +86,7 @@ def plot_landscape_heatmap(data_dict, z_proj_list, dests=None):
 
         rng = np.random.default_rng()
         
-        keep = rng.random(len(valid)) < 0.05
+        keep = rng.random(len(valid)) < density
 
         start = np.array(list(valid.keys()))[keep]
         end   = np.array(list(valid.values()))[keep]
@@ -100,7 +100,7 @@ def plot_landscape_heatmap(data_dict, z_proj_list, dests=None):
                 angles='xy', scale_units='xy', scale=1,
                 color=colors, width=0.005)
 
-    ax.set(xlabel='PC1', ylabel='PC2', title='Heatmap of Error Value')
+    ax.set(xlabel='PC1', ylabel='PC2')
     ax.set_aspect('equal')
     plt.tight_layout()
 

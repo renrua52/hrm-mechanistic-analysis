@@ -28,6 +28,9 @@ def main():
 
     assert not (dataset_type == "maze" and permutes > 2)
 
+    print(f"Permutes: {permutes}, {len(ckpt_list)} ckpts in total.")
+    print(f"Dataset: {dataset_type}.")
+
     torch.cuda.set_device(0)
 
     models = []
@@ -114,9 +117,16 @@ def main():
                 all_equal = all_equal & stacked_halts  # Only consider the passes halted by ACT
                 correct_cnt = torch.sum(all_equal, dim=0)  # [batch_size]
                 halt_cnt = torch.sum(stacked_halts, dim=0)
-                any_perm_correct = (correct_cnt*2 >= halt_cnt)  # 50% majority among halted passes
+
+                if dataset_type == "sudoku":
+                    perm_correct = (correct_cnt*2 > halt_cnt)  # 50% majority among halted passes
+                else:
+                    perm_correct = (correct_cnt > 0)
+
+                # print(correct_cnt)
+                # print(halt_cnt)
                  
-                all_correct[start_idx:end_idx] |= any_perm_correct
+                all_correct[start_idx:end_idx] |= perm_correct
 
                 # In practice, the ACT mechanism reaches about 100% accuracy in final stages of training.
             

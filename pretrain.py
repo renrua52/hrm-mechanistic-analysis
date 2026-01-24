@@ -287,7 +287,7 @@ def evaluate(config: PretrainConfig, train_state: TrainState, eval_loader: torch
             segment_exact_accuracies = []
 
             while True:
-                carry, _, metrics, preds, all_finish = train_state.model(carry=carry, batch=batch, return_keys=config.eval_save_outputs)
+                carry, _, metrics, preds, all_finish, _ = train_state.model(carry=carry, batch=batch, return_keys=config.eval_save_outputs)
                 
                 
                 segment_loss = metrics["lm_loss"].detach()
